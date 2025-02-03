@@ -7,8 +7,8 @@ require __DIR__ . '/../vendor/autoload.php';
 
 class Email
 {
-    /* Si SMTP utilisé
-    private static $sender_host; */
+    /* Si SMTP utilisé */
+    private static $sender_host; 
     private static $sender_email;
     private static $sender_username;
     private static $sender_password; 
@@ -48,15 +48,13 @@ class Email
         $mail = new PHPMailer(true);
 
         $mail->SMTPDebug = 0;
-        $mail->isMail();
-        /* Si SMTP utilisé
         $mail->isSMTP();
         $mail->Host = self::$sender_host;
         $mail->SMTPAuth = true;
         $mail->Username = self::$sender_email;
         $mail->Password = self::$sender_password;
         $mail->SMTPSecure = PHPMailer::ENCRYPTION_SMTPS;
-        $mail->Port = 465;*/
+        $mail->Port = 465;
         $mail->setFrom(self::$sender_email, self::$sender_username);
         $mail->addAddress($receiver_email);
         $mail->addReplyTo(self::$sender_email, self::$sender_username);
