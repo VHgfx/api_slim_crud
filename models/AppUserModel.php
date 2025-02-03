@@ -80,6 +80,23 @@ class AppUser extends Database {
         } 
     }
 
+    public function existingAccount() {
+        $query = "SELECT id FROM " . self::TABLE_NAME . " WHERE email = :email";
+        
+        try {
+            $stmt = $this->db->prepare($query);
+            $stmt->bindValue(":email", $this->email, PDO::PARAM_STR);
+            $stmt->execute();
+
+            $result = $stmt->fetch(PDO::FETCH_ASSOC);
+
+            return $result ? $result['id'] : null;
+        } catch (PDOException $e) {
+            error_log('PDO Exception : ' . $e);
+            return null;
+        } 
+    }
+
     public function infos(): mixed{
         $query = 'SELECT ' . self::TABLE_NAME . '.id, ' . self::TABLE_NAME . '.email, ' . self::TABLE_NAME . '.firstname, ' . self::TABLE_NAME . '.lastname, role.name AS role_name
             FROM ' . self::TABLE_NAME . '
