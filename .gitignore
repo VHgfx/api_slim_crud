@@ -7,6 +7,7 @@ composer.lock
 
 # Ignore environment variables
 .env
+/config/.env*
 
 # Ignore PHPUnit result cache
 .phpunit.result.cache
