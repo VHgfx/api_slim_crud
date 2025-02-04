@@ -29,6 +29,7 @@ foreach (glob($modelsPath . '*.php') as $filename) {
 }
 
 require_once __DIR__ .'/routes/AppUser/AppUserController.php';
+require_once __DIR__ .'/routes/Document/DocumentController.php';
 
 require_once __DIR__ .'/routes/Authentification/AuthentificationController.php';
 

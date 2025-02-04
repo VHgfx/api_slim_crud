@@ -25,7 +25,7 @@ function loadEnv($filePath) {
 
 loadEnv(__DIR__ . '/.env');
 
-// Determine environement (e.g., 'local', 'dev', 'prod')
+// Determine environement ('local', 'dev', 'prod')
 $env = getenv('APP_ENV') ?: 'dev';
 
 $envFile = __DIR__ . "/.env.$env";

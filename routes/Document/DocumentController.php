@@ -17,7 +17,7 @@ $app->any('/document/{modifier}[/{id:\d+}]', function (Request $request, Respons
 
     try {
         processLoginStatus($request, $user, $auth_key);
-        $result = processModifier($args['modifier'], $user, $data, $request_type, $arg_id);
+        $result = processDocumentModifier($args['modifier'], $user, $data, $request_type, $arg_id);
 
         $statusCode = match(true) {
             $result['success'] === true && $request_type === 'POST' => 201, 

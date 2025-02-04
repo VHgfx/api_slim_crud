@@ -10,60 +10,6 @@ class LoginHistory extends Database {
 
     public $id_app_user;
 
-    /** Retourne le résultat de la requête SQL paramétrée
-     * @param string $query         La requête SQL en elle-même.
-     * @param array  $params        Tableau des paramètres de la requêtes au format [['email' => ['value => $this->email, 'type' => PDO::PARAM_STR]]].
-     * @param string $errorMessage  Le message d'erreur renvoyé.
-     * @param string $operationType INSERT, UPDATE, DELETE, SELECT.
-     * 
-     * @throws \Exception
-     * @return mixed
-     */
-    private function executeTransaction(string $query, array $params, string $errorMessage, string $operationType): mixed
-    {
-        try {
-            $this->db->beginTransaction();
-
-            $stmt = $this->db->prepare($query);
-            foreach ($params as $key => $value) {
-                $stmt->bindValue($key, $value['value'], $value['type']);
-            }
-
-            if ($stmt->execute()) {
-                switch ($operationType) {
-                    case 'INSERT':
-                        $this->db->commit();
-                        return true;
-
-                    case 'UPDATE':
-                    case 'DELETE':
-                        if ($stmt->rowCount() > 0) {
-                            $this->db->commit();
-                            return true;
-                        }
-                        throw new Exception($errorMessage);
-
-                    case 'SELECT':
-                        $this->db->commit(); 
-                        return $stmt->fetchAll(PDO::FETCH_ASSOC); 
-
-                    default:
-                        throw new Exception("Unsupported operation type: $operationType");
-                }
-            } else {
-                throw new Exception($errorMessage);
-            }
-        } catch (PDOException $e) {
-            $this->db->rollBack();
-            error_log("PDO Error: " . $e->getMessage());
-            return false;
-        } catch (Exception $e) {
-            $this->db->rollBack();
-            error_log("Error: " . $e->getMessage());
-            return false;
-        }
-    }
-
     public function add() {
         try {
             $this->db->beginTransaction();
@@ -93,6 +39,72 @@ class LoginHistory extends Database {
             $this->db->rollBack();
             echo "Error: " . $e->getMessage();
             return false;
+        }
+    }
+
+    public function getLoginSummary(){
+        try {
+            $query = "
+                SELECT
+                    DATE_FORMAT(login_time, '%Y-%m') AS month_year,
+                    COUNT(*) AS total_logins,
+                    SUM(success) AS successful_logins,
+                    COUNT(*) - SUM(success) AS failed_logins
+                FROM login_history
+                WHERE id_app_user = :id_app_user
+                GROUP BY month_year
+                ORDER BY month_year DESC;
+            ";
+
+            $stmt = $this->db->prepare($query);
+            $stmt->bindValue(":id_app_user", $this->id_app_user, PDO::PARAM_INT);
+            $stmt->execute();
+            
+            return $stmt->fetchAll(PDO::FETCH_ASSOC);
+        } catch (PDOException $e) {
+            echo "Error: " . $e->getMessage();
+            return [];
+        }
+    }
+    
+    public function getLoginDetails() {
+        try {
+            $query = "
+                SELECT 
+                    lh.id,
+                    lh.login_time,
+                    lh.ip_adress,
+                    lh.success,
+                    lh.user_agent,
+                    DATE_FORMAT(lh.login_time, '%Y') AS year,
+                    DATE_FORMAT(lh.login_time, '%Y-%m') AS month_year,
+                    login_summary.total_logins,
+                    login_summary.successful_logins,
+                    login_summary.failed_logins
+                FROM login_history lh
+                JOIN (
+                    SELECT 
+                        DATE_FORMAT(login_time, '%Y-%m') AS month_year,
+                        COUNT(*) AS total_logins,
+                        SUM(success) AS successful_logins,
+                        COUNT(*) - SUM(success) AS failed_logins
+                    FROM login_history
+                    WHERE id_app_user = :id_app_user
+                    GROUP BY month_year
+                ) AS login_summary
+                ON DATE_FORMAT(lh.login_time, '%Y-%m') = login_summary.month_year
+                WHERE lh.id_app_user = :id_app_user
+                ORDER BY lh.login_time DESC;
+            ";
+
+            $stmt = $this->db->prepare($query);
+            $stmt->bindValue(":id_app_user", $this->id_app_user, PDO::PARAM_INT);
+            $stmt->execute();
+            
+            return $stmt->fetchAll(PDO::FETCH_ASSOC);
+        } catch (PDOException $e) {
+            echo "Error: " . $e->getMessage();
+            return [];
         }
     }
 }
