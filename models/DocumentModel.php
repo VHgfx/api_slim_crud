@@ -3,10 +3,14 @@ class Document extends Database {
     private const TABLE_NAME = 'document'; # A renommer en fonction de la table
 
     public $id;
+    public $name;
     public $created;
     public $signature;
-    public $iv;
+    public $name_iv;
+    public $signature_iv;
+
     public $id_app_user;
+    public $id_document_type;
 
 
     private function executeTransaction(string $query, array $params, string $errorMessage, string $operationType): mixed
@@ -72,5 +76,57 @@ class Document extends Database {
             error_log('PDO Exception : ' . $e);
             return false;
         } 
+    }
+
+    public function existingFile(): bool {
+        $query = "SELECT * FROM " . self::TABLE_NAME . " 
+            WHERE name = :name
+            AND id_app_user = :id_app_user";
+        
+        try {
+            $stmt = $this->db->prepare($query);
+            $stmt->bindValue(":name", $this->name, PDO::PARAM_STR);
+            $stmt->bindValue(":id_app_user", $this->id_app_user, PDO::PARAM_INT);
+            $stmt->execute();
+
+            $count = $stmt->fetchColumn();
+
+            return ($count >= 1);
+        } catch (PDOException $e) {
+            error_log('PDO Exception : ' . $e);
+            return false;
+        } 
+    }
+
+
+    public function add() {
+        try {
+            $this->db->beginTransaction();
+
+            $query = "INSERT INTO `". self::TABLE_NAME  ."` (`name`, `name_iv`, `id_app_user`, `id_document_type`) 
+                    VALUES (:name, :name_iv, :id_app_user, :id_document_type)";
+        
+            $stmt = $this->db->prepare($query);
+
+            $stmt->bindValue(":name", $this->name, PDO::PARAM_STR);
+            $stmt->bindValue(":name_iv", $this->name, PDO::PARAM_STR);
+            $stmt->bindValue(":id_app_user", $this->id_app_user, PDO::PARAM_INT);
+            $stmt->bindValue(":id_document_type", $this->id_document_type, PDO::PARAM_INT);
+            
+            if ($stmt->execute()) {
+                $created_id = $this->db->lastInsertId();
+                $this->db->commit();
+                
+                return $created_id; 
+            } else {
+                $this->db->rollBack();
+                return false;
+            }
+
+        } catch (PDOException $e) {
+            $this->db->rollBack();
+            echo "Error: " . $e->getMessage();
+            return false;
+        }
     }
 }   
