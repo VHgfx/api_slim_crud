@@ -98,6 +98,26 @@ class Document extends Database {
         } 
     }
 
+    public function getDocument(): array {
+        $query = "SELECT * FROM " . self::TABLE_NAME . " 
+            WHERE id_document_type = :id_document_type
+            AND id_app_user = :id_app_user";
+        
+        try {
+            $stmt = $this->db->prepare($query);
+            $stmt->bindValue(":id_document_type", $this->id_document_type, PDO::PARAM_INT);
+            $stmt->bindValue(":id_app_user", $this->id_app_user, PDO::PARAM_INT);
+            $stmt->execute();
+
+            $result = $stmt->fetchAll(PDO::FETCH_ASSOC);
+
+            return $result;
+        } catch (PDOException $e) {
+            error_log('PDO Exception : ' . $e);
+            return [];
+        } 
+    }
+
 
     public function add() {
         try {
@@ -109,7 +129,7 @@ class Document extends Database {
             $stmt = $this->db->prepare($query);
 
             $stmt->bindValue(":name", $this->name, PDO::PARAM_STR);
-            $stmt->bindValue(":name_iv", $this->name, PDO::PARAM_STR);
+            $stmt->bindValue(":name_iv", $this->name_iv, PDO::PARAM_STR);
             $stmt->bindValue(":id_app_user", $this->id_app_user, PDO::PARAM_INT);
             $stmt->bindValue(":id_document_type", $this->id_document_type, PDO::PARAM_INT);
             

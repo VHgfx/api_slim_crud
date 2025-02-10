@@ -116,6 +116,9 @@ function getLoginHistory($user, $arg_id = null): array {
     $document_type = new DocumentType();
     $login_history = new LoginHistory();
 
+    /** Renvoie le bon id_user à viser en fonction du rôle
+     * 
+     */
     $processTarget = function($user, $arg_id): int {
         if(in_array($user->id_role, [1,2])){
             if(isset($arg_id) && !empty($arg_id) && filter_var($arg_id, FILTER_VALIDATE_INT)){
@@ -126,6 +129,9 @@ function getLoginHistory($user, $arg_id = null): array {
         return $user->id;
     };
 
+    /** Récupération de l'historique de login
+     * @return array YYYY => YYYY-MM => logins
+     */
     $processLoginData = function($login_history): array {
         $raw_data = $login_history->getLoginDetails();
         if(!is_array($raw_data)){
@@ -169,6 +175,23 @@ function getLoginHistory($user, $arg_id = null): array {
         return $sorted_data;
     };
 
+    /** Récupération de la liste des documents existants
+     * @return array Retourne les noms bruts des documents
+     */
+    $getExistingFiles = function($document, $pdf_salt, $method): array {
+        $decrypted_existing_files = [];
+        $existing_files = $document->getDocument();
+
+        if (!empty($existing_files)) {
+            foreach ($existing_files as $file) {
+                $decrypted_file_name = openssl_decrypt($file['name'], $method, $pdf_salt, 0, $file['name_iv']);
+                $decrypted_existing_files[] = $decrypted_file_name;
+            }
+        } 
+        
+        return $decrypted_existing_files;
+    };
+
     $searched_user->id = $processTarget($user, $arg_id);
     $searched_infos = $searched_user->infos();
 
@@ -189,9 +212,15 @@ function getLoginHistory($user, $arg_id = null): array {
     $pdf_salt = getenv('PDF_SALT');
     $method = 'aes-256-cbc';
 
+    $decrypted_existing_files = $getExistingFiles($document, $pdf_salt, $method);
+
     foreach ($sorted_data as $year => $months) {
         foreach ($months as $month_year => $data) {
             $raw_file_name = $file_type . "_". $month_year;
+
+            if (in_array($raw_file_name, $decrypted_existing_files)) {
+                continue;
+            }
 
             $document->name_iv = random_bytes(16);
             $document->name = openssl_encrypt($raw_file_name, $method, $pdf_salt, 0, $document->name_iv);
@@ -199,10 +228,26 @@ function getLoginHistory($user, $arg_id = null): array {
         }
     }
 
+    $created_files = $document->getDocument();
+
+    $links = [];
+    $folder_path = 'documents/login_history';
+
+    foreach($created_files as $file){
+        $file_name = $file['name'] . '.pdf';  
+        $decrypted_file_name = openssl_decrypt($file['name'], $method, $pdf_salt, 0, $file['name_iv']);
+
+        $custom_name = $decrypted_file_name.'_'.$searched_infos[0]['lastname'].'_'.$searched_infos[0]['firstname'].'.pdf';
+
+        $download_url = getenv('ROOT_API').'download.php?type=recapitulatifs&custom_name='.$custom_name.'&file='.urlencode($file_name);
+
+        $links[] = $download_url;
+    }
+    
     $result = [
         'success' => true,
         'message' => "Récupération de l'historique de connexion réussie",
-        'data' => $sorted_data
+        'data' => $links
     ];
 
     return $result;
